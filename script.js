@@ -1,4 +1,4 @@
-/* Browser widget - script.js (Cloudflare Proxy Enabled) */
+/* Browser widget - script.js (Cloudflare Proxy & HTML Engine Fixed) */
 
 (() => {
   const KEY_BM = 'browser_bookmarks_v1';
@@ -9,18 +9,16 @@
   const CUSTOM_PROXY_URL = 'https://dhur.mdadibalzian.workers.dev/?url=';
 
   const DEFAULT_ENGINES = [
-    { name: 'Google', url: 'https://www.google.com/search?q=' },
+    { name: 'DuckDuckGo (Lite)', url: 'https://html.duckduckgo.com/html/?q=' },
     { name: 'Bing', url: 'https://www.bing.com/search?q=' },
-    { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=' },
-    { name: 'Yahoo', url: 'https://search.yahoo.com/search?p=' },
-    { name: 'Ecosia', url: 'https://www.ecosia.org/search?q=' },
-    { name: 'Brave', url: 'https://search.brave.com/search?q=' }
+    { name: 'Google', url: 'https://www.google.com/search?q=' },
+    { name: 'Ecosia', url: 'https://www.ecosia.org/search?q=' }
   ];
 
   const DEFAULT_BOOKMARKS = [
-    { title: 'Facebook', url: 'https://www.facebook.com' },
-    { title: 'YouTube', url: 'https://www.youtube.com' },
-    { title: 'Gmail', url: 'https://mail.google.com' }
+    { title: 'Wikipedia', url: 'https://wikipedia.org' },
+    { title: 'DuckDuckGo', url: 'https://html.duckduckgo.com/html/' },
+    { title: 'Bing', url: 'https://www.bing.com' }
   ];
 
   let bookmarks = [];
@@ -109,13 +107,20 @@
     if (text) statusTimer = setTimeout(() => { statusEl.textContent = ''; }, 3000);
   }
 
-  // URL Helpers
+  // FIXED: Smart URL Normalizer & Search Fallback
   function normalizeUrl(u) {
-    try { return new URL(u).href; }
-    catch (e) {
-      try { return new URL('https://' + u).href; }
-      catch (e2) { return u; }
+    if (!u) return '';
+    u = u.trim();
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    
+    // Check if it looks like a valid domain (e.g. example.com)
+    if (u.includes('.') && !u.includes(' ')) {
+      return 'https://' + u;
     }
+    
+    // Fallback: treat as a search query
+    const engine = settings.engineUrl || DEFAULT_ENGINES[0].url;
+    return engine + encodeURIComponent(u);
   }
 
   function addHistory(title, url) {
@@ -125,7 +130,7 @@
     renderHistory();
   }
 
-  // Fetch and Load page through Cloudflare Worker Proxy
+  // FIXED: Fetch and Load page through Cloudflare Worker Proxy with Base URL Injection
   function openUrl(targetUrl, title) {
     const fullUrl = normalizeUrl(targetUrl);
     addHistory(title || fullUrl, fullUrl);
@@ -142,7 +147,16 @@
         return res.text();
       })
       .then((html) => {
-        pageContent.innerHTML = html;
+        // Inject <base> tag so relative CSS, images, and links resolve correctly
+        const baseTag = `<base href="${fullUrl}">`;
+        let cleanHtml = html;
+        if (cleanHtml.includes('<head>')) {
+          cleanHtml = cleanHtml.replace('<head>', `<head>${baseTag}`);
+        } else {
+          cleanHtml = baseTag + cleanHtml;
+        }
+
+        pageContent.innerHTML = cleanHtml;
         setStatus('Loaded');
 
         // Intercept inner links to load via proxy
@@ -151,7 +165,7 @@
           a.addEventListener('click', (e) => {
             e.preventDefault();
             const href = a.getAttribute('href');
-            if (href) {
+            if (href && !href.startsWith('javascript:')) {
               try {
                 const resolved = new URL(href, fullUrl).href;
                 openUrl(resolved);
@@ -161,6 +175,29 @@
             }
           });
         });
+
+        // Intercept Form Submissions (e.g., search boxes inside pages)
+        const forms = pageContent.querySelectorAll('form');
+        forms.forEach((form) => {
+          form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const action = form.getAttribute('action') || '';
+            const method = (form.getAttribute('method') || 'GET').toUpperCase();
+            
+            try {
+              const target = new URL(action, fullUrl).href;
+              if (method === 'GET') {
+                const formData = new FormData(form);
+                const params = new URLSearchParams(formData).toString();
+                const finalTarget = target + (target.includes('?') ? '&' : '?') + params;
+                openUrl(finalTarget);
+              }
+            } catch (err) {
+              console.error('Form submit error', err);
+            }
+          });
+        });
+
       })
       .catch((err) => {
         pageContent.innerHTML = `<div style="color:#ff6b6b; padding:10px;">Failed to load page.<br><br><small>${err.message}</small></div>`;
