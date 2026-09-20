@@ -1,15 +1,12 @@
-/* Browser widget - script.js
-   - LSK (left softkey) opens the Menu; RSK is "Edit" on the home screen
-     (toggles bookmark editing) and "Back" everywhere else.
-   - Backward / Forward menu items only appear when there is somewhere to
-     go: Backward shows once you've navigated away from the start page,
-     Forward shows only right after you've gone Backward at least once.
-*/
+/* Browser widget - script.js (Cloudflare Proxy Enabled) */
 
 (() => {
   const KEY_BM = 'browser_bookmarks_v1';
   const KEY_HIST = 'browser_history_v1';
   const KEY_SETTINGS = 'browser_settings_v1';
+
+  // Your Cloudflare Worker Proxy URL
+  const CUSTOM_PROXY_URL = 'https://dhur.mdadibalzian.workers.dev/?url=';
 
   const DEFAULT_ENGINES = [
     { name: 'Google', url: 'https://www.google.com/search?q=' },
@@ -31,15 +28,33 @@
   let settings = { engineUrl: DEFAULT_ENGINES[0].url, customEngines: [] };
   let editMode = false;
 
-  // Screen navigation stacks (drive Backward / Forward availability)
-  const navStack = [];   // screens you can go Backward to
-  const fwdStack = [];   // screens you can go Forward to (only after a Backward)
+  // Navigation stacks
+  const navStack = [];
+  const fwdStack = [];
+
+  // Inject View Screen dynamically if not present
+  let screenView = document.getElementById('screen-view');
+  if (!screenView) {
+    screenView = document.createElement('main');
+    screenView.className = 'screen';
+    screenView.id = 'screen-view';
+    screenView.setAttribute('data-screen', 'view');
+    screenView.innerHTML = `
+      <div id="page-content" style="padding: 6px; overflow-y: auto; height: 100%; font-size: 12px; line-height: 1.4; color: #eee; word-break: break-word;"></div>
+    `;
+    const appContainer = document.getElementById('app');
+    const softkeyBar = document.querySelector('.softkey-bar');
+    appContainer.insertBefore(screenView, softkeyBar);
+  }
+
+  const pageContent = document.getElementById('page-content');
 
   const screens = {
     home: document.getElementById('screen-home'),
     menu: document.getElementById('screen-menu'),
     address: document.getElementById('screen-address'),
-    history: document.getElementById('screen-history')
+    history: document.getElementById('screen-history'),
+    view: screenView
   };
 
   const el = (id) => document.getElementById(id);
@@ -63,7 +78,7 @@
   const statusEl = el('status');
   const clockEl = el('clock');
 
-  // ---- persistence ----
+  // Persistence
   function safeGet(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -86,15 +101,15 @@
   function saveHistory(){ safeSet(KEY_HIST, historyEntries); }
   function saveSettings(){ safeSet(KEY_SETTINGS, settings); }
 
-  // ---- status ----
+  // Status
   let statusTimer = null;
   function setStatus(text) {
     statusEl.textContent = text || '';
     if (statusTimer) clearTimeout(statusTimer);
-    if (text) statusTimer = setTimeout(() => { statusEl.textContent = ''; }, 2200);
+    if (text) statusTimer = setTimeout(() => { statusEl.textContent = ''; }, 3000);
   }
 
-  // ---- url helpers ----
+  // URL Helpers
   function normalizeUrl(u) {
     try { return new URL(u).href; }
     catch (e) {
@@ -110,12 +125,50 @@
     renderHistory();
   }
 
-  function openUrl(url, title) {
-    window.open(url, '_blank', 'noopener');
-    addHistory(title, url);
+  // Fetch and Load page through Cloudflare Worker Proxy
+  function openUrl(targetUrl, title) {
+    const fullUrl = normalizeUrl(targetUrl);
+    addHistory(title || fullUrl, fullUrl);
+    showScreen('view');
+
+    pageContent.innerHTML = '<div style="text-align:center; padding-top: 20px;">Loading page...</div>';
+    setStatus('Loading…');
+
+    const proxiedReqUrl = CUSTOM_PROXY_URL + encodeURIComponent(fullUrl);
+
+    fetch(proxiedReqUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      })
+      .then((html) => {
+        pageContent.innerHTML = html;
+        setStatus('Loaded');
+
+        // Intercept inner links to load via proxy
+        const links = pageContent.querySelectorAll('a');
+        links.forEach((a) => {
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            const href = a.getAttribute('href');
+            if (href) {
+              try {
+                const resolved = new URL(href, fullUrl).href;
+                openUrl(resolved);
+              } catch (err) {
+                openUrl(href);
+              }
+            }
+          });
+        });
+      })
+      .catch((err) => {
+        pageContent.innerHTML = `<div style="color:#ff6b6b; padding:10px;">Failed to load page.<br><br><small>${err.message}</small></div>`;
+        setStatus('Error loading page');
+      });
   }
 
-  // ---- engines ----
+  // Search Engine
   function allEngines() {
     return DEFAULT_ENGINES.concat(settings.customEngines || []);
   }
@@ -136,7 +189,7 @@
   function addCustomEngine() {
     const name = (prompt('Search engine name:') || '').trim();
     if (!name) { engineSelect.value = settings.engineUrl; return; }
-    const base = (prompt('Search URL (query will be appended at the end):', 'https://') || '').trim();
+    const base = (prompt('Search URL:', 'https://') || '').trim();
     if (!base) { engineSelect.value = settings.engineUrl; return; }
     settings.customEngines = settings.customEngines || [];
     settings.customEngines.push({ name, url: base });
@@ -149,12 +202,11 @@
   function performSearch(query) {
     if (!query || !query.trim()) { setStatus('Enter a search term'); return; }
     const engine = settings.engineUrl || DEFAULT_ENGINES[0].url;
-    const url = engine + encodeURIComponent(query.trim());
-    openUrl(url, query.trim());
-    setStatus('Searching…');
+    const searchUrl = engine + encodeURIComponent(query.trim());
+    openUrl(searchUrl, query.trim());
   }
 
-  // ---- bookmarks ----
+  // Bookmarks
   function renderBookmarks() {
     bmList.innerHTML = '';
     if (bookmarks.length === 0) {
@@ -172,12 +224,11 @@
 
       const a = document.createElement('a');
       a.href = b.url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
       a.textContent = b.title || b.url;
       a.addEventListener('click', (e) => {
-        if (editMode) { e.preventDefault(); return; }
-        addHistory(b.title || b.url, b.url);
+        e.preventDefault();
+        if (editMode) return;
+        openUrl(b.url, b.title);
       });
 
       const removeBtn = document.createElement('button');
@@ -216,7 +267,7 @@
     updateRsk();
   }
 
-  // ---- history ----
+  // History
   function renderHistory() {
     histList.innerHTML = '';
     if (historyEntries.length === 0) {
@@ -231,9 +282,12 @@
       meta.className = 'meta';
       const a = document.createElement('a');
       a.href = h.url;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
       a.textContent = h.title || h.url;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        openUrl(h.url, h.title);
+      });
+
       const time = document.createElement('div');
       time.className = 'time';
       time.textContent = new Date(h.time).toLocaleString();
@@ -254,7 +308,7 @@
     });
   }
 
-  // ---- screen navigation ----
+  // Navigation
   function currentScreenName() {
     const cur = document.querySelector('.screen.active');
     return cur ? cur.getAttribute('data-screen') : 'home';
@@ -272,8 +326,6 @@
     if (name === 'address') { try { directInput.focus(); } catch (e) {} }
   }
 
-  // Normal forward navigation (menu selections, Home, etc.) - pushes onto
-  // navStack and clears the forward stack, same as a real browser.
   function showScreen(name) {
     if (!screens[name]) return;
     const cur = currentScreenName();
@@ -284,7 +336,6 @@
     activate(name);
   }
 
-  // Backward: pop navStack, push current onto fwdStack.
   function goBackward() {
     if (currentScreenName() === 'home' && editMode) { setEditMode(false); return; }
     if (navStack.length === 0) { setStatus('At start page'); return; }
@@ -294,7 +345,6 @@
     activate(prev);
   }
 
-  // Forward: pop fwdStack, push current onto navStack.
   function goForward() {
     if (fwdStack.length === 0) { setStatus('No next page'); return; }
     const cur = currentScreenName();
@@ -303,7 +353,6 @@
     activate(next);
   }
 
-  // RSK = Back everywhere except Home, where it's Edit/Done.
   function handleRsk() {
     if (currentScreenName() === 'home') { setEditMode(!editMode); return; }
     goBackward();
@@ -311,8 +360,7 @@
 
   function openMenu() { showScreen('menu'); }
 
-  // ---- menu (rebuilt each time it opens, so Backward/Forward only show
-  // when there's actually somewhere to go) ----
+  // Menu
   function renderMenu() {
     const items = [
       { action: 'bookmarks', label: 'Bookmarks' },
@@ -362,26 +410,30 @@
         goForward();
         break;
       case 'reload':
-        setStatus('Reloading…');
-        setTimeout(() => location.reload(), 200);
+        if (currentScreenName() === 'view' && navStack.length > 0) {
+          const lastEntry = historyEntries[historyEntries.length - 1];
+          if (lastEntry) openUrl(lastEntry.url, lastEntry.title);
+        } else {
+          location.reload();
+        }
         break;
       case 'exit':
         setStatus('Exiting…');
         setTimeout(() => {
           try { window.close(); } catch (e) {}
-          setStatus('Cannot exit — close this tab manually');
+          setStatus('Cannot exit — close manually');
         }, 300);
         break;
     }
   }
 
-  // ---- clock ----
+  // Clock
   function updateClock() {
     const now = new Date();
     clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  // ---- wiring ----
+  // Events
   function wireEvents() {
     btnLsk.addEventListener('click', openMenu);
     btnRsk.addEventListener('click', handleRsk);
@@ -410,10 +462,8 @@
     btnDirectGo.addEventListener('click', () => {
       const v = directInput.value.trim();
       if (!v) { setStatus('Enter an address'); return; }
-      const url = normalizeUrl(v);
-      openUrl(url, v);
+      openUrl(v);
       directInput.value = '';
-      setStatus('Opening…');
     });
     directInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); btnDirectGo.click(); }
@@ -456,11 +506,4 @@
   }
 
   init();
-
-  window.Browser = {
-    getBookmarks: () => bookmarks.slice(),
-    getHistory: () => historyEntries.slice(),
-    settings,
-    showScreen
-  };
 })();
