@@ -1,0 +1,301 @@
+/* Browser widget — fixed 240x320 layout for feature-phone/CloudPhone widgets.
+   Always dark theme. Bottom bar = LSK (Menu) / RSK (contextual Edit/Back) softkeys.
+*/
+
+*{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+:root{
+  --bg:#0c0c0e;
+  --panel:#1a1a1d;
+  --panel-2:#141416;
+  --text:#e9e9ec;
+  --muted:#8b8b91;
+  --accent:#c62030;
+  --accent-2:#8f1622;
+  --accent-contrast:#ffffff;
+  --border:rgba(255,255,255,0.08);
+  --danger:#ff5b5b;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+html, body{
+  height:100%;
+  margin:0;
+  padding:0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  overflow-x:hidden;
+  overflow-y:hidden;
+  -webkit-text-size-adjust:100%;
+}
+
+.device{
+  width:240px;
+  height:320px;
+  margin:8px auto;
+  border-radius:10px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  background: var(--panel);
+  border:1px solid var(--border);
+  -webkit-user-select:none;
+  user-select:none;
+}
+
+@media (max-width:240px){
+  .device{ transform: scale(0.98); transform-origin:center; }
+}
+
+/* Title bar */
+.titlebar{
+  flex:0 0 auto;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  color: var(--accent-contrast);
+  padding:6px 10px;
+  font-size:13px;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.titlebar .clock{ font-size:11px; font-weight:600; opacity:0.9; }
+
+/* Screens */
+.screen{
+  flex:1 1 auto;
+  overflow-y:auto;
+  padding:8px;
+  display:none;
+  -webkit-overflow-scrolling: touch;
+}
+.screen.active{ display:block; }
+.screen::-webkit-scrollbar{ width:5px; }
+.screen::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.15); border-radius:6px; }
+
+h2.screen-title{
+  font-size:13px;
+  margin:2px 0 8px 0;
+  color: var(--muted);
+  font-weight:700;
+}
+
+/* Address bar */
+.address-row{
+  display:flex;
+  gap:6px;
+  margin-bottom:6px;
+}
+.address-input{
+  flex:1 1 auto;
+  min-width:0;
+  padding:8px;
+  border-radius:6px;
+  border:1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size:13px;
+  outline:none;
+}
+.address-input::placeholder{ color: var(--muted); }
+.go-btn{
+  flex:0 0 auto;
+  width:34px;
+  border-radius:6px;
+  border:none;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+/* Engine row */
+.engine-row{ margin-bottom:10px; }
+.engine-select{
+  width:100%;
+  padding:7px 8px;
+  border-radius:6px;
+  border:1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size:12px;
+}
+
+/* Bookmarks */
+.bm-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:6px;
+}
+.bm-header .label{ font-size:12px; font-weight:700; color: var(--muted); }
+.bm-header .edit-toggle{
+  font-size:11px;
+  color: var(--accent);
+  background:none;
+  border:none;
+  cursor:pointer;
+  padding:2px 4px;
+}
+
+ul.bm-list{ list-style:none; margin:0 0 6px 0; padding:0; }
+ul.bm-list li{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 4px;
+  border-bottom:1px solid var(--border);
+  font-size:12.5px;
+}
+ul.bm-list li .idx{
+  color: var(--accent);
+  font-weight:700;
+  font-size:12px;
+  flex:0 0 auto;
+  width:16px;
+}
+ul.bm-list li a{
+  color: var(--text);
+  text-decoration:none;
+  flex:1 1 auto;
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+ul.bm-list li .remove{
+  flex:0 0 auto;
+  background:none;
+  border:none;
+  color: var(--danger);
+  font-size:14px;
+  cursor:pointer;
+  padding:0 4px;
+  display:none;
+}
+.edit-mode ul.bm-list li .remove{ display:inline; }
+.empty-note{ font-size:12px; color: var(--muted); padding:6px 4px; }
+
+.add-bm-form{
+  display:none;
+  flex-direction:column;
+  gap:6px;
+  margin-top:6px;
+  padding-top:8px;
+  border-top:1px dashed var(--border);
+}
+.edit-mode .add-bm-form{ display:flex; }
+.add-bm-form input{
+  padding:7px;
+  border-radius:6px;
+  border:1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size:12px;
+}
+
+.btn{
+  padding:7px 10px;
+  border-radius:6px;
+  border:none;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size:12px;
+  cursor:pointer;
+}
+.btn.full{ width:100%; }
+.btn.secondary{ background: var(--panel-2); color: var(--text); border:1px solid var(--border); }
+
+/* Menu screen */
+ul.menu-list{ list-style:none; margin:0; padding:0; }
+ul.menu-list li{ margin-bottom:5px; }
+.menu-item{
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  text-align:left;
+  background: var(--panel-2);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:8px;
+  font-size:12.5px;
+  color: var(--text);
+  cursor:pointer;
+}
+.menu-item:focus, .menu-item:active{
+  outline:none;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.menu-item .num{
+  flex:0 0 auto;
+  width:16px;
+  height:16px;
+  border-radius:3px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size:10px;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* History list */
+ul.hist-list{ list-style:none; margin:0; padding:0; }
+ul.hist-list li{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:6px;
+  padding:7px 4px;
+  border-bottom:1px solid var(--border);
+}
+ul.hist-list li .meta{ min-width:0; overflow:hidden; }
+ul.hist-list li a{
+  color: var(--text);
+  text-decoration:none;
+  font-size:12px;
+  display:block;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:130px;
+}
+ul.hist-list li .time{ font-size:10px; color: var(--muted); }
+ul.hist-list li .remove{
+  background:none; border:none; color: var(--danger); font-size:13px; cursor:pointer; flex:0 0 auto;
+}
+
+/* Footer softkey bar (LSK = Menu, RSK = Edit/Back) */
+.softkey-bar{
+  flex:0 0 auto;
+  padding:8px 6px;
+  background: var(--accent-2);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.softkey{
+  background:none;
+  border:none;
+  color: var(--accent-contrast);
+  font-size:12px;
+  font-weight:700;
+  padding:6px 8px;
+  cursor:pointer;
+}
+.status{
+  flex:1 1 auto;
+  text-align:center;
+  font-size:10px;
+  color: rgba(255,255,255,0.85);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+* { max-width: 100%; }

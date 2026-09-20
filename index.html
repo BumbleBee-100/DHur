@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=240, height=320, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Browser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app" class="device">
+    <header class="titlebar">
+      <span>Browser</span>
+      <span class="clock" id="clock"></span>
+    </header>
+
+    <!-- HOME -->
+    <main class="screen active" id="screen-home" data-screen="home">
+      <div class="address-row">
+        <input id="search-input" class="address-input" type="search" placeholder="www." aria-label="Search or address" />
+        <button id="btn-go" class="go-btn" aria-label="Go">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+            <line x1="16.65" y1="16.65" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="engine-row">
+        <select id="engine-select" class="engine-select" aria-label="Search engine"></select>
+      </div>
+
+      <div class="bm-header">
+        <span class="label">Bookmarks</span>
+        <button id="btn-edit-toggle" class="edit-toggle">Edit</button>
+      </div>
+      <ul class="bm-list" id="bm-list"></ul>
+
+      <form id="add-bm-form" class="add-bm-form" onsubmit="return false;">
+        <input id="bm-title" type="text" placeholder="Title" aria-label="Bookmark title" />
+        <input id="bm-url" type="text" placeholder="e.g. example.com" aria-label="Bookmark URL" />
+        <button id="btn-save-bm" class="btn full" type="button">Add bookmark</button>
+      </form>
+    </main>
+
+    <!-- MENU -->
+    <main class="screen" id="screen-menu" data-screen="menu">
+      <h2 class="screen-title">Menu</h2>
+      <ul class="menu-list" id="menu-list"></ul>
+    </main>
+
+    <!-- ENTER ADDRESS -->
+    <main class="screen" id="screen-address" data-screen="address">
+      <h2 class="screen-title">Enter address</h2>
+      <div class="address-row">
+        <input id="direct-input" class="address-input" type="text" placeholder="https://example.com" aria-label="Web address" />
+      </div>
+      <button id="btn-direct-go" class="btn full">Go</button>
+    </main>
+
+    <!-- HISTORY -->
+    <main class="screen" id="screen-history" data-screen="history">
+      <h2 class="screen-title">History</h2>
+      <button id="btn-clear-history" class="btn secondary full" style="margin-bottom:8px;">Clear history</button>
+      <ul class="hist-list" id="hist-list"></ul>
+    </main>
+
+    <footer class="softkey-bar">
+      <button id="btn-lsk" class="softkey" tabindex="-1">Menu</button>
+      <div class="status" id="status" aria-live="polite"></div>
+      <button id="btn-rsk" class="softkey" tabindex="-1">Edit</button>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
