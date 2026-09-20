@@ -17,7 +17,7 @@ feature phones (240x320 screens) with softkey navigation.
 1. Go to the [CloudPhone Developer Page](https://www.cloudfone.com/my).
 2. Select **Add Widget**.
 3. Paste this Start URL:
-   `https://<your-github-username>.github.io/<your-repo-name>`
+   `git@github.com:BumbleBee-100/DHur.git`
 4. Upload `icon.png` if required.
 5. Save and refresh — **Browser** will appear on your CloudPhone.
 
@@ -27,4 +27,4 @@ step. To host it:
 1. Push this repo to GitHub.
 2. In the repo, go to **Settings → Pages**, set the source to the `main`
    branch (root), and save.
-3. Your widget will be live at `https://<username>.github.io/<repo-name>`.
+3. Your widget will be live at `git@github.com:BumbleBee-100/DHur.git`.
